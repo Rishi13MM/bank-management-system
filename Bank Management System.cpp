@@ -7,6 +7,5 @@ using namespace std;
 int main()
 {
     Bank bank;
-
     return 0;
 }

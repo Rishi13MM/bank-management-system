@@ -42,11 +42,14 @@ private:
 	ConnectionDetails details;
 
 	void insertRecord(Account);
+	long int getBalance(long int);
 public:
 	//Methods
 	Bank();
 	void openAccount();
 	void updateAccountDetails();
+	void deposit();
+	void withdraw();
 };
 
 Bank::Account::Account(string name, double balance) {
@@ -195,3 +198,119 @@ void Bank::updateAccountDetails() {
 		delete pstmt;
 	}
 }
+
+void Bank::deposit() {
+	long int amount, accountNo;
+
+	cout << "\nEnter deposit amount: ";
+	cin >> amount;
+
+	if (amount < 1) {
+		throw sql::SQLException("Invalid deposit amount!\n");
+	}
+
+	cout << "\nEnter receiver account no: ";
+	cin >> accountNo;
+
+	if (accountNo < 1000) {
+		//throw invalidAccountNo("Account no. must be 1000 or more and unique.\n");
+		throw sql::SQLException("Invalid account no. it must be 1000 or more.\n");
+	}
+
+	string query;
+	sql::PreparedStatement* pstmt;
+
+	//Update balance in account table
+	query = "UPDATE " + details.tableNames[0] + " SET balance=balance+? WHERE account_no=?";
+	pstmt = conn->prepareStatement(query);
+	pstmt->setDouble(1, amount);
+	pstmt->setInt64(2, accountNo);
+
+	int rowEffected = pstmt->executeUpdate();
+
+	if (rowEffected == 0) {
+		cout << "\nAccount not found!";
+	}
+
+	delete pstmt;
+
+	//add transection 
+	query = "INSERT INTO " + details.tableNames[1] + "(amount, type, account_no, _date) VALUES (?, ?, ?, ?)";
+	pstmt = conn->prepareStatement(query);
+	pstmt->setInt64(1, amount);
+	pstmt->setString(2, "credit");
+	pstmt->setInt64(3, accountNo);
+	pstmt->setDateTime(4, "2025-03-10");
+	pstmt->executeUpdate();
+
+	delete pstmt;
+}
+
+void Bank::withdraw() {
+	long int amount, accountNo;
+
+	cout << "Enter withdraw amount: ";
+	cin >> amount;
+
+	if (amount < 1) {
+		throw sql::SQLException("Invalid withdraw amount!\n");
+	}
+
+	cout << "Enter your account no: ";
+	cin >> accountNo;
+
+	int newBalance = getBalance(accountNo) - amount;
+
+	if (newBalance < 0) {
+		throw sql::SQLException("Insufficient balance!\n");
+	}
+
+	string query = "UPDATE " + details.tableNames[0] + " SET balance=? WHERE account_no=?";
+	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
+	pstmt->setInt64(1, newBalance);
+	pstmt->setInt64(2, accountNo);
+	pstmt->executeUpdate();
+	delete pstmt;
+
+	//Update transection table
+	query = "INSERT INTO " + details.tableNames[1] + "(amount, type, account_no, _date) VALUES (?, ?, ?, ?)";
+	pstmt = conn->prepareStatement(query);
+	pstmt->setInt64(1, amount);
+	pstmt->setString(2, "debit");
+	pstmt->setInt64(3, accountNo);
+	pstmt->setDateTime(4, "2025-03-10");
+	pstmt->executeUpdate();
+	delete pstmt;
+}
+
+long int Bank::getBalance(int long accountNo) {
+
+	//Get balance from the given account no
+	string query = "SELECT balance FROM " + details.tableNames[0] + " WHERE account_no=?";
+	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
+	pstmt->setInt64(1, accountNo);
+	sql::ResultSet* res = pstmt->executeQuery();
+
+	//Throw exception if no record founds
+	if (res->rowsCount() == 0) {
+		throw sql::SQLException("Account not found!\n");
+	}
+
+	res->next();
+	long int balance = res->getInt64("balance");
+
+	//Release memory
+	delete pstmt;
+	delete res;
+
+	return balance;
+}
+
+
+
+
+
+
+
+
+
