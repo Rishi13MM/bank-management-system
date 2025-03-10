@@ -33,9 +33,8 @@ private:
 	//Create account data type
 	struct Account {
 		string name;
-		long int accountNo;
 		double balance;
-		Account(long int,string,  double);
+		Account(string,  double);
 	};
 
 	//Properties
@@ -47,10 +46,10 @@ public:
 	//Methods
 	Bank();
 	void openAccount();
+	void updateAccountDetails();
 };
 
-Bank::Account::Account(long int accountNo, string name, double balance) {
-	this->accountNo = accountNo;
+Bank::Account::Account(string name, double balance) {
 	this->name = name;
 	this->balance = balance;
 }
@@ -79,61 +78,120 @@ Bank::Bank() {
 	conn->setSchema(details.databaseName);
 
 	//Create account table
-	query = "CREATE TABLE IF NOT EXISTS " + details.tableNames[0] + " (account_no BIGINT, holder_name VARCHAR(255), balance DOUBLE, status enum(\"active\",\"inactive\",\"closed\") NOT NULL, opening_date DATE, closing_date DATE, CONSTRAINT pk_acc PRIMARY KEY(account_no))";
+	query = "CREATE TABLE IF NOT EXISTS " + details.tableNames[0] + " (account_no BIGINT AUTO_INCREMENT, holder_name VARCHAR(255), balance DOUBLE, status enum(\"active\",\"inactive\",\"closed\") NOT NULL, opening_date DATE, closing_date DATE, CONSTRAINT pk_acc PRIMARY KEY(account_no))";
+	pstmt = conn->prepareStatement(query);
+	pstmt->executeUpdate();
+	delete pstmt;
+
+	query = "ALTER TABLE " + details.tableNames[0] + " AUTO_INCREMENT=1000";
 	pstmt = conn->prepareStatement(query);
 	pstmt->executeUpdate();
 	delete pstmt;
 
 	//Create transecton table
-	query = "CREATE TABLE IF NOT EXISTS " + details.tableNames[1] + " (id BIGINT, amount DOUBLE, type ENUM ('credit','debit','enquiry'), account_no BIGINT, _date DATE, CONSTRAINT pk_trans PRIMARY KEY(id), CONSTRAINT fk_acc_trans FOREIGN KEY(account_no) REFERENCES " + details.tableNames[0] + "(account_no))";
+	query = "CREATE TABLE IF NOT EXISTS " + details.tableNames[1] + " (id BIGINT AUTO_INCREMENT, amount DOUBLE, type ENUM ('credit','debit','enquiry'), account_no BIGINT, _date DATE, CONSTRAINT pk_trans PRIMARY KEY(id), CONSTRAINT fk_acc_trans FOREIGN KEY(account_no) REFERENCES " + details.tableNames[0] + "(account_no))";
+	pstmt = conn->prepareStatement(query);
+	pstmt->executeUpdate();
+	delete pstmt;
+
+	query = "ALTER TABLE "+	details.tableNames[1]+" AUTO_INCREMENT=1";
 	pstmt = conn->prepareStatement(query);
 	pstmt->executeUpdate();
 	delete pstmt;
 }
 
 void Bank::insertRecord(Account account) {
-	string query = "INSERT INTO " + details.tableNames[0] + " VALUES (?,?,?,?,?,?)";
+	string query = "INSERT INTO " + details.tableNames[0] + " (holder_name, balance, status, opening_date) VALUES (?,?,?,?)";
 	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
-	pstmt->setInt64(1, account.accountNo);
-	pstmt->setString(2, account.name);
-	pstmt->setDouble(3, account.balance);
-	pstmt->setString(4, "active");
+	pstmt->setString(1, account.name);
+	pstmt->setDouble(2, account.balance);
+	pstmt->setString(3, "active");
 
 	//Need to implement date system
-	pstmt->setDateTime(5, "2025-03-10");
-	pstmt->setDateTime(6, "2026-05-31");
+	pstmt->setDateTime(4, "2025-03-10");
 
 	pstmt->executeUpdate();
-
 	delete pstmt;
 }
 
 void Bank::openAccount() {
 	string name;
 	double initBalance;
-	long int accountNo;
 
-	cout << "\nEnter account details";
-	cout << "\nAccount No: ";
-
-	//Need to implement account no. system
-	cin >> accountNo;
-
-	cout << "A/C holder name: ";
-	cin.ignore();
+	cout << "\nEnter details to open new account";
+	cout << "\nA/C holder name: ";
 	getline(cin, name);
 	cout << "Initial deposit amount: ";
 	cin >> initBalance;
 
-	if (initBalance < 1) {
+	if (initBalance < 0) {
 		//throw invalidAmount("Initial deposit amount must be greater than zero.\n");
 		throw sql::SQLException("Initial deposit amount must be greater than zero.\n");
 	}
-	else if (accountNo < 1000) {
+
+	Account newAccount(name, initBalance);
+	insertRecord(newAccount);
+}
+
+
+void Bank::updateAccountDetails() {
+	long int accountNo;
+	int choice, status;
+
+	cout << "\nEnter details of account which you want to update";
+	cout << "\nAccount no: ";
+	cin >> accountNo;
+
+	if (accountNo < 1000) {
 		//throw invalidAccountNo("Account no. must be 1000 or more and unique.\n");
-		throw sql::SQLException("Account no. must be 1000 or more.\n");
+		throw sql::SQLException("Invalid account no. it must be 1000 or more.\n");
 	}
 
-	Account newAccount(accountNo, name, initBalance);
-	insertRecord(newAccount);
+	cout << "\nWhich data you want to update";
+	cout << "\n1. Update name";
+	cout << "\n2. Update status";
+	cout << "\nEnter your choice ";
+	cin >> choice;
+
+	string query, value;
+
+	switch (choice) {
+	case 1:
+		cout << "\nNew name: ";
+		cin.ignore();
+		getline(cin, value);
+		query = "UPDATE " + details.tableNames[0] + " SET holder_name=? WHERE account_no = ?";
+		break;
+	case 2:
+		cout << "\nSelect status\n1. active\n2.inactive\n3.closed\nEnter your status choice ";
+		cin >> status;
+
+		if (status == 1) {
+			value = "active";
+		}
+		else if (status == 2) {
+			value = "inactive";
+		}
+		else if (status == 3) {
+			value = "closed";
+		}
+		else {
+			query = "";
+			cout << "\nInvalid choice, operation fail!\n";
+		}
+		query = "UPDATE " + details.tableNames[0] + " SET status=? WHERE account_no = ?";
+		break;
+	default:
+		query = "";
+		cout << "\nInvalid choice, operation fail!\n";
+		break;
+	}
+
+	if (query != "") {
+		sql::PreparedStatement* pstmt = conn->prepareStatement(query);
+		pstmt->setString(1, value);
+		pstmt->setInt64(2, accountNo);
+		pstmt->executeUpdate();
+		delete pstmt;
+	}
 }
