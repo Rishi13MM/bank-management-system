@@ -1,6 +1,11 @@
+#pragma once
 #include <iostream>
+#include "BankManagementSystem.h"
+
+using namespace std;
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    Bank bank;
+    return 0;
 }
