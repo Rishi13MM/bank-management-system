@@ -7,5 +7,7 @@ using namespace std;
 int main()
 {
     Bank bank;
+    bank.openAccount();
+
     return 0;
 }

@@ -32,23 +32,24 @@ class Bank {
 private:
 	//Create account data type
 	struct Account {
-	private:
 		string name;
 		long int accountNo;
 		double balance;
-	public:
-		Account(string, long int, double);
+		Account(long int,string,  double);
 	};
 
 	//Properties
 	sql::Connection* conn;
 	ConnectionDetails details;
+
+	void insertRecord(Account);
 public:
 	//Methods
 	Bank();
+	void openAccount();
 };
 
-Bank::Account::Account(string name, long int accountNo, double balance) {
+Bank::Account::Account(long int accountNo, string name, double balance) {
 	this->accountNo = accountNo;
 	this->name = name;
 	this->balance = balance;
@@ -88,4 +89,51 @@ Bank::Bank() {
 	pstmt = conn->prepareStatement(query);
 	pstmt->executeUpdate();
 	delete pstmt;
+}
+
+void Bank::insertRecord(Account account) {
+	string query = "INSERT INTO " + details.tableNames[0] + " VALUES (?,?,?,?,?,?)";
+	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
+	pstmt->setInt64(1, account.accountNo);
+	pstmt->setString(2, account.name);
+	pstmt->setDouble(3, account.balance);
+	pstmt->setString(4, "active");
+
+	//Need to implement date system
+	pstmt->setDateTime(5, "2025-03-10");
+	pstmt->setDateTime(6, "2026-05-31");
+
+	pstmt->executeUpdate();
+
+	delete pstmt;
+}
+
+void Bank::openAccount() {
+	string name;
+	double initBalance;
+	long int accountNo;
+
+	cout << "\nEnter account details";
+	cout << "\nAccount No: ";
+
+	//Need to implement account no. system
+	cin >> accountNo;
+
+	cout << "A/C holder name: ";
+	cin.ignore();
+	getline(cin, name);
+	cout << "Initial deposit amount: ";
+	cin >> initBalance;
+
+	if (initBalance < 1) {
+		//throw invalidAmount("Initial deposit amount must be greater than zero.\n");
+		throw sql::SQLException("Initial deposit amount must be greater than zero.\n");
+	}
+	else if (accountNo < 1000) {
+		//throw invalidAccountNo("Account no. must be 1000 or more and unique.\n");
+		throw sql::SQLException("Account no. must be 1000 or more.\n");
+	}
+
+	Account newAccount(accountNo, name, initBalance);
+	insertRecord(newAccount);
 }
