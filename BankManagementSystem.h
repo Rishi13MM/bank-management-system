@@ -1,6 +1,8 @@
 #pragma once
 
 #include <iostream>
+#include <iomanip>
+
 #include <cppconn/driver.h>
 #include <cppconn/connection.h>
 #include <cppconn/prepared_statement.h>
@@ -51,6 +53,7 @@ public:
 	void deposit();
 	void withdraw();
 	void balanceEnquiry();
+	void showAllAccounts();
 	void closeAccount();
 };
 
@@ -357,4 +360,44 @@ void Bank::closeAccount() {
 	pstmt->setInt64(1, accountNo);
 	pstmt->executeUpdate();
 	delete pstmt;
+}
+
+void Bank::showAllAccounts() {
+	string query = "SELECT * FROM " + details.tableNames[0];
+	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
+	sql::ResultSet* res = pstmt->executeQuery();
+
+	sql::ResultSetMetaData* resMD = res->getMetaData();
+	int count=resMD->getColumnCount();
+
+	for (int i = 1; i <= count; i++)
+	{
+		cout <<setw(20)<<resMD->getColumnName(i);
+	}
+
+	cout << "\n";
+
+	while(res->next()){
+		for (int i = 1; i <= count; i++)
+		{
+			string name = resMD->getColumnTypeName(i);
+
+			if (name == "BIGINT") {
+				cout << setw(20) << res->getInt64(i);
+			}
+			else if (name == "VARCHAR") {
+				cout << setw(20) << res->getString(i);
+			}
+			else if (name == "DOUBLE") {
+				cout << setw(20) << res->getDouble(i);
+			}
+			else if (name == "ENUM") {
+				cout << setw(20) << res->getString(i);
+			}
+			else if (name == "DATE") {
+				cout << setw(20) << res->getString(i);
+			}
+		}
+		cout << endl;
+	}
 }
