@@ -42,7 +42,7 @@ private:
 	ConnectionDetails details;
 
 	void insertRecord(Account);
-	long int getBalance(long int);
+	double getBalance(long int);
 public:
 	//Methods
 	Bank();
@@ -50,6 +50,7 @@ public:
 	void updateAccountDetails();
 	void deposit();
 	void withdraw();
+	void balanceEnquiry();
 };
 
 Bank::Account::Account(string name, double balance) {
@@ -200,7 +201,8 @@ void Bank::updateAccountDetails() {
 }
 
 void Bank::deposit() {
-	long int amount, accountNo;
+	long int accountNo;
+	double amount;
 
 	cout << "\nEnter deposit amount: ";
 	cin >> amount;
@@ -237,7 +239,7 @@ void Bank::deposit() {
 	//add transection 
 	query = "INSERT INTO " + details.tableNames[1] + "(amount, type, account_no, _date) VALUES (?, ?, ?, ?)";
 	pstmt = conn->prepareStatement(query);
-	pstmt->setInt64(1, amount);
+	pstmt->setDouble(1, amount);
 	pstmt->setString(2, "credit");
 	pstmt->setInt64(3, accountNo);
 	pstmt->setDateTime(4, "2025-03-10");
@@ -247,7 +249,8 @@ void Bank::deposit() {
 }
 
 void Bank::withdraw() {
-	long int amount, accountNo;
+	long int accountNo;
+	double amount;
 
 	cout << "Enter withdraw amount: ";
 	cin >> amount;
@@ -259,7 +262,7 @@ void Bank::withdraw() {
 	cout << "Enter your account no: ";
 	cin >> accountNo;
 
-	int newBalance = getBalance(accountNo) - amount;
+	double newBalance = getBalance(accountNo) - amount;
 
 	if (newBalance < 0) {
 		throw sql::SQLException("Insufficient balance!\n");
@@ -267,7 +270,7 @@ void Bank::withdraw() {
 
 	string query = "UPDATE " + details.tableNames[0] + " SET balance=? WHERE account_no=?";
 	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
-	pstmt->setInt64(1, newBalance);
+	pstmt->setDouble(1, newBalance);
 	pstmt->setInt64(2, accountNo);
 	pstmt->executeUpdate();
 	delete pstmt;
@@ -275,7 +278,7 @@ void Bank::withdraw() {
 	//Update transection table
 	query = "INSERT INTO " + details.tableNames[1] + "(amount, type, account_no, _date) VALUES (?, ?, ?, ?)";
 	pstmt = conn->prepareStatement(query);
-	pstmt->setInt64(1, amount);
+	pstmt->setDouble(1, amount);
 	pstmt->setString(2, "debit");
 	pstmt->setInt64(3, accountNo);
 	pstmt->setDateTime(4, "2025-03-10");
@@ -283,7 +286,7 @@ void Bank::withdraw() {
 	delete pstmt;
 }
 
-long int Bank::getBalance(int long accountNo) {
+double Bank::getBalance(int long accountNo) {
 
 	//Get balance from the given account no
 	string query = "SELECT balance FROM " + details.tableNames[0] + " WHERE account_no=?";
@@ -291,13 +294,13 @@ long int Bank::getBalance(int long accountNo) {
 	pstmt->setInt64(1, accountNo);
 	sql::ResultSet* res = pstmt->executeQuery();
 
-	//Throw exception if no record founds
+	//Throw exception if no record found
 	if (res->rowsCount() == 0) {
 		throw sql::SQLException("Account not found!\n");
 	}
 
 	res->next();
-	long int balance = res->getInt64("balance");
+	double balance = res->getDouble("balance");
 
 	//Release memory
 	delete pstmt;
@@ -306,11 +309,21 @@ long int Bank::getBalance(int long accountNo) {
 	return balance;
 }
 
+void Bank::balanceEnquiry() {
+	long int accountNo;
+	double amount;
+	cout << "\nEnter account: ";
+	cin >> accountNo;
+	amount = getBalance(accountNo);
+	cout << "\nAvailable balance: "<<amount;
 
-
-
-
-
-
-
-
+	//Update transection table
+	string query = "INSERT INTO " + details.tableNames[1] + " (amount, type, account_no, _date) VALUES (?,?,?,?)";
+	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
+	pstmt->setDouble(1, amount);
+	pstmt->setString(2, "enquiry");
+	pstmt->setInt64(3, accountNo);
+	pstmt->setDateTime(4, "2025-03-11");
+	pstmt->executeUpdate();
+	delete pstmt;
+}
