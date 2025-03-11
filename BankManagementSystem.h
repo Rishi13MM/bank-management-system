@@ -51,6 +51,7 @@ public:
 	void deposit();
 	void withdraw();
 	void balanceEnquiry();
+	void closeAccount();
 };
 
 Bank::Account::Account(string name, double balance) {
@@ -324,6 +325,36 @@ void Bank::balanceEnquiry() {
 	pstmt->setString(2, "enquiry");
 	pstmt->setInt64(3, accountNo);
 	pstmt->setDateTime(4, "2025-03-11");
+	pstmt->executeUpdate();
+	delete pstmt;
+}
+
+void Bank::closeAccount() {
+	long int accountNo;
+
+	cout << "\nEnter details of account which you want to close";
+	cout << "\nAccount no: ";
+	cin >> accountNo;
+
+	if (accountNo < 1000) {
+		//throw invalidAccountNo("Account no. must be 1000 or more and unique.\n");
+		throw sql::SQLException("Invalid account no. it must be 1000 or more.\n");
+	}
+
+	string query;
+	sql::PreparedStatement* pstmt;
+
+	//Delete associated records from transection table
+	query = "DELETE FROM " + details.tableNames[1] + " WHERE account_no=?";
+	pstmt = conn->prepareStatement(query);
+	pstmt->setInt64(1, accountNo);
+	pstmt->executeUpdate();
+	delete pstmt;
+
+	//Delete account from account table
+	query = "DELETE FROM " + details.tableNames[0] + " WHERE account_no=?";
+	pstmt = conn->prepareStatement(query);
+	pstmt->setInt64(1, accountNo);
 	pstmt->executeUpdate();
 	delete pstmt;
 }
