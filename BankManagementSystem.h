@@ -215,7 +215,7 @@ void Bank::deposit() {
 		throw sql::SQLException("Invalid deposit amount!\n");
 	}
 
-	cout << "\nEnter receiver account no: ";
+	cout << "Enter receiver account no: ";
 	cin >> accountNo;
 
 	if (accountNo < 1000) {
@@ -256,7 +256,7 @@ void Bank::withdraw() {
 	long int accountNo;
 	double amount;
 
-	cout << "Enter withdraw amount: ";
+	cout << "\nEnter withdraw amount: ";
 	cin >> amount;
 
 	if (amount < 1) {
@@ -319,7 +319,7 @@ void Bank::balanceEnquiry() {
 	cout << "\nEnter account: ";
 	cin >> accountNo;
 	amount = getBalance(accountNo);
-	cout << "\nAvailable balance: "<<amount;
+	cout << "Available balance: "<<amount<<endl;
 
 	//Update transection table
 	string query = "INSERT INTO " + details.tableNames[1] + " (amount, type, account_no, _date) VALUES (?,?,?,?)";
@@ -370,9 +370,18 @@ void Bank::showAllAccounts() {
 	sql::ResultSetMetaData* resMD = res->getMetaData();
 	int count=resMD->getColumnCount();
 
+	cout << "\n";
+
 	for (int i = 1; i <= count; i++)
 	{
 		cout <<setw(20)<<resMD->getColumnName(i);
+	}
+
+	cout << "\n";
+
+	for (int i = 1; i <= count*20; i++)
+	{
+		cout << "-";
 	}
 
 	cout << "\n";
