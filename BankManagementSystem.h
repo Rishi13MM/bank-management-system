@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CustomException.h"
+
 #include <iostream>
 #include <iomanip>
 
@@ -133,8 +135,7 @@ void Bank::openAccount() {
 	cin >> initBalance;
 
 	if (initBalance < 0) {
-		//throw invalidAmount("Initial deposit amount must be greater than zero.\n");
-		throw sql::SQLException("Initial deposit amount must be greater than zero.\n");
+		throw InvalidAmount("Initial deposit amount must be zero or more.\n");
 	}
 
 	Account newAccount(name, initBalance);
@@ -151,8 +152,7 @@ void Bank::updateAccountDetails() {
 	cin >> accountNo;
 
 	if (accountNo < 1000) {
-		//throw invalidAccountNo("Account no. must be 1000 or more and unique.\n");
-		throw sql::SQLException("Invalid account no. it must be 1000 or more.\n");
+		throw InvalidAccountNo();
 	}
 
 	cout << "\nWhich data you want to update";
@@ -211,16 +211,15 @@ void Bank::deposit() {
 	cout << "\nEnter deposit amount: ";
 	cin >> amount;
 
-	if (amount < 1) {
-		throw sql::SQLException("Invalid deposit amount!\n");
-	}
-
 	cout << "Enter receiver account no: ";
 	cin >> accountNo;
 
+	if (amount < 1) {
+		throw InvalidAmount();
+	}
+
 	if (accountNo < 1000) {
-		//throw invalidAccountNo("Account no. must be 1000 or more and unique.\n");
-		throw sql::SQLException("Invalid account no. it must be 1000 or more.\n");
+		throw InvalidAccountNo();
 	}
 
 	string query;
@@ -260,18 +259,23 @@ void Bank::withdraw() {
 	cin >> amount;
 
 	if (amount < 1) {
-		throw sql::SQLException("Invalid withdraw amount!\n");
+		throw InvalidAmount();
 	}
 
 	cout << "Enter your account no: ";
 	cin >> accountNo;
 
+	if (accountNo < 1000) {
+		throw InvalidAccountNo();
+	}
+
 	double newBalance = getBalance(accountNo) - amount;
 
 	if (newBalance < 0) {
-		throw sql::SQLException("Insufficient balance!\n");
+		throw InsufficientBalance();
 	}
 
+	//Update balance from record in account table
 	string query = "UPDATE " + details.tableNames[0] + " SET balance=? WHERE account_no=?";
 	sql::PreparedStatement* pstmt = conn->prepareStatement(query);
 	pstmt->setDouble(1, newBalance);
@@ -279,7 +283,7 @@ void Bank::withdraw() {
 	pstmt->executeUpdate();
 	delete pstmt;
 
-	//Update transection table
+	//Add a transection record in transection table
 	query = "INSERT INTO " + details.tableNames[1] + "(amount, type, account_no, _date) VALUES (?, ?, ?, ?)";
 	pstmt = conn->prepareStatement(query);
 	pstmt->setDouble(1, amount);
@@ -300,7 +304,7 @@ double Bank::getBalance(int long accountNo) {
 
 	//Throw exception if no record found
 	if (res->rowsCount() == 0) {
-		throw sql::SQLException("Account not found!\n");
+		throw AccountNotFound();
 	}
 
 	res->next();
@@ -316,8 +320,14 @@ double Bank::getBalance(int long accountNo) {
 void Bank::balanceEnquiry() {
 	long int accountNo;
 	double amount;
+
 	cout << "\nEnter account: ";
 	cin >> accountNo;
+
+	if (accountNo < 1000) {
+		throw InvalidAccountNo();
+	}
+
 	amount = getBalance(accountNo);
 	cout << "Available balance: "<<amount<<endl;
 
@@ -340,8 +350,7 @@ void Bank::closeAccount() {
 	cin >> accountNo;
 
 	if (accountNo < 1000) {
-		//throw invalidAccountNo("Account no. must be 1000 or more and unique.\n");
-		throw sql::SQLException("Invalid account no. it must be 1000 or more.\n");
+		throw InvalidAccountNo();
 	}
 
 	string query;
@@ -354,7 +363,7 @@ void Bank::closeAccount() {
 	pstmt->executeUpdate();
 	delete pstmt;
 
-	//Delete account from account table
+	//Delete a account from account table
 	query = "DELETE FROM " + details.tableNames[0] + " WHERE account_no=?";
 	pstmt = conn->prepareStatement(query);
 	pstmt->setInt64(1, accountNo);
